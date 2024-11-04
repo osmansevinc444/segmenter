@@ -1,0 +1,11 @@
+server:
+  port: 8090
+
+requiredServices:
+  ffmpeg: ${FFMPEG_PATH:C:/ffmpeg-master-latest-win64-gpl/bin/ffmpeg}
+  ffprobe: ${FFPROBE_PATH:C:/ffmpeg-master-latest-win64-gpl/bin/ffprobe}
+
+requiredParams:
+  segmentDuration: ${SEGMENT_DEFAULT_DURATION:5}
+  localTempPath: ${STORAGE_LOCAL_TEMP_PATH:C:/temp}
+  readyIfSegmentCount: ${READY_IF_CREATED:3}
