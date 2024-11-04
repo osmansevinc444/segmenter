@@ -85,16 +85,27 @@ public class FFmpegService {
             addWatermarkParameters(command, watermark);
         }
 
+        // Dynamic filtering to skip segments (example: skip every other segment)
+        command.add("-filter_complex");
+        command.add("[0:v]select='not(mod(n\\,2))'[v]"); // Replace with logic specific to ad markers
+
+        // Map the filtered output
+        command.add("-map");
+        command.add("[v]");
+
+        // Video settings
         command.add("-c:v");
         command.add("libx264");
         command.add("-b:v");
         command.add(quality.getVideoBitrateKbps() + "k");
 
+        // Audio settings
         command.add("-c:a");
         command.add("aac");
         command.add("-b:a");
         command.add(quality.getAudioBitrateKbps() + "k");
 
+        // Segmenting options
         command.add("-f");
         command.add("segment");
         command.add("-segment_time");
@@ -111,6 +122,7 @@ public class FFmpegService {
 
         return command;
     }
+
 
     private void addWatermarkParameters(List<String> command, Watermark watermark) {
         if (watermark.getImagePath() != null) {
