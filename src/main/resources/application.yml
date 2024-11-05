@@ -9,3 +9,19 @@ requiredParams:
   segmentDuration: ${SEGMENT_DEFAULT_DURATION:5}
   localTempPath: ${STORAGE_LOCAL_TEMP_PATH:C:/temp}
   readyIfSegmentCount: ${READY_IF_CREATED:3}
+  serverUrl: ${URL:}
+
+storage:
+  aws:
+    enabled: true
+    awsAccessKey: ${AWS_ACCESS_KEY:}
+    awsSecretKey: ${AWS_SECRET_KEY:}
+    awsBucket: ${AWS_BUCKET:}
+  azure:
+    enabled: false
+    azureConnectionString: ${AZURE_CONNECTION_STRING:}
+    azureContainer: ${AZURE_CONTAINER:}
+  gcp:
+    enabled: true
+    gcpProjectId: ${GCP_PROJECT_ID:}
+    gcpBucket: ${GCP_BUCKET:}

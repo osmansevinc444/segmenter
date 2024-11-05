@@ -34,6 +34,18 @@ public class ThreadPoolConfig {
         );
     }
 
+    @Bean(name = "storageTaskExecutor")
+    public ThreadPoolTaskExecutor storageTaskExecutor() {
+        // Storage operations
+        return createExecutor(
+                "storage-",
+                Runtime.getRuntime().availableProcessors() * 4,   // Core pool size - IO bound (we need extra thread)
+                Runtime.getRuntime().availableProcessors() * 8,   // Max pool size
+                1000, // Queue capacity
+                180   // Keep alive seconds
+        );
+    }
+
     private ThreadPoolTaskExecutor createExecutor(
             String namePrefix,
             int corePoolSize,

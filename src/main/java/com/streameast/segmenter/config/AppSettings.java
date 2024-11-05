@@ -19,6 +19,10 @@ public class AppSettings {
     @Getter
     private RequiredParams requiredParams = new RequiredParams();
 
+    @Valid
+    @Getter
+    private StorageParams storage = new StorageParams();
+
     @Getter
     @Setter
     public static class RequiredServices {
@@ -43,6 +47,41 @@ public class AppSettings {
         @NotNull
         private Integer readyIfSegmentCount;
 
+        private String serverUrl= "http://localhost:8090";
+
+    }
+
+    @Getter
+    @Setter
+    public static class StorageParams {
+        private AwsStorage aws = new AwsStorage();
+        private AzureStorage azure = new AzureStorage();
+        private GcpStorage gcp = new GcpStorage();
+
+        @Getter
+        @Setter
+        public static class AwsStorage {
+            private boolean enabled;
+            private String awsAccessKey;
+            private String awsSecretKey;
+            private String awsBucket;
+        }
+
+        @Getter
+        @Setter
+        public static class AzureStorage {
+            private boolean enabled;
+            private String azureConnectionString;
+            private String azureContainer;
+        }
+
+        @Getter
+        @Setter
+        public static class GcpStorage {
+            private boolean enabled;
+            private String gcpProjectId;
+            private String gcpBucket;
+        }
     }
 
     public Path resolvePath(String... parts) {

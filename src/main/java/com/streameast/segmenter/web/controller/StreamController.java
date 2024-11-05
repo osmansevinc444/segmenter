@@ -30,6 +30,7 @@ public class StreamController {
         try {
             List<String> urls = streamService.startStream(
                     request.getStreamUrl(),
+                    request.getStorageTypes(),
                     request.getVideoQuality(),
                     request.getWatermark(),
                     null

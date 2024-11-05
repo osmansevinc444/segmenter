@@ -7,6 +7,8 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
 import lombok.Data;
 
+import java.util.List;
+
 @Data
 public class StreamRequest {
 
@@ -14,6 +16,7 @@ public class StreamRequest {
     @Pattern(regexp = "^(rtmp|rtsp|http|https)://.*", message = "Invalid stream URL format")
     private String streamUrl;
 
+    private List<String> storageTypes;
     private VideoQuality videoQuality = VideoQuality.LOW;
 
     @Nullable

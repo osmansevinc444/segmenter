@@ -15,6 +15,13 @@ import org.springframework.data.redis.serializer.StringRedisSerializer;
 public class RedisConfig {
 
     @Bean
+    public ObjectMapper objectMapper() {
+        ObjectMapper mapper = new ObjectMapper();
+        mapper.registerModule(new JavaTimeModule());
+        return mapper;
+    }
+
+    @Bean
     public RedisTemplate<String, StreamContext> redisTemplate(RedisConnectionFactory redisConnectionFactory) {
         RedisTemplate<String, StreamContext> template = new RedisTemplate<>();
         template.setConnectionFactory(redisConnectionFactory);
