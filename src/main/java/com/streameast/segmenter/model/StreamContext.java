@@ -19,6 +19,8 @@ public class StreamContext implements Serializable {
     private VideoQuality videoQuality;
     private LocalDateTime startTime;
     private Watermark watermark;
+    private long pId=-1;
+    boolean isProccessing=false;
 
     private final AtomicBoolean active = new AtomicBoolean(false);
     private final AtomicInteger segmentCount = new AtomicInteger(0);

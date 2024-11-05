@@ -1,6 +1,7 @@
 package com.streameast.segmenter.service;
 
 import com.streameast.segmenter.config.AppSettings;
+import com.streameast.segmenter.model.StreamContext;
 import com.streameast.segmenter.model.enums.VideoQuality;
 import com.streameast.segmenter.model.Watermark;
 import lombok.extern.slf4j.Slf4j;
@@ -14,6 +15,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 
 
@@ -27,17 +29,23 @@ public class FFmpegService {
     private final String ffprobePath;
     private final Integer defaultSegmentDuration;
     private final ThreadPoolTaskExecutor ffmpegStreamExecutor;
+    private final RedisHelper redisHelper;
 
-    public FFmpegService(@Qualifier("ffmpegStreamExecutor") ThreadPoolTaskExecutor ffmpegStreamExecutor, AppSettings appConfig) {
+    public FFmpegService(@Qualifier("ffmpegStreamExecutor") ThreadPoolTaskExecutor ffmpegStreamExecutor, AppSettings appConfig, RedisHelper redisHelper) {
         this.ffmpegStreamExecutor = ffmpegStreamExecutor;
         this.appSettings = appConfig;
         this.ffmpegPath = appConfig.getRequiredServices().getFfmpeg();
         this.ffprobePath = appConfig.getRequiredServices().getFfprobe();
         this.defaultSegmentDuration = appConfig.getRequiredParams().getSegmentDuration();
+        this.redisHelper = redisHelper;
     }
 
     public CompletableFuture<Void> startStreamProcessing(String streamId, String streamUrl, Path outputPattern, VideoQuality quality, Watermark watermark) {
         long startTime = System.currentTimeMillis();
+        StreamContext context = redisHelper.getContext(streamId);
+        if(context == null)
+            throw new RuntimeException("FFmpeg process failed because of context is null: " + streamId);
+
         return CompletableFuture.runAsync(() -> {
             try{
 
@@ -50,13 +58,14 @@ public class FFmpegService {
                 ProcessBuilder pb = new ProcessBuilder(command);
                 pb.inheritIO();
                 Process process = pb.start();
-                //activeProcesses.put(streamId, process);
+                context.setPId(process.pid());
+                context.setProccessing(true);
+                redisHelper.saveContext(streamId, context);
 
                 int exitCode = process.waitFor();
 
                 if (exitCode != 0 && exitCode != 255) { // 255 is for normal termination
-                    performanceLogger.error("FFmpeg process failed   for streamId: {}", streamId);
-                    throw new RuntimeException("FFmpeg process failed with exit code: " + exitCode);
+                    performanceLogger.warn("FFmpeg stopped {}", streamId);
                 }
 
                 long duration = System.currentTimeMillis() - startTime;
@@ -68,7 +77,8 @@ public class FFmpegService {
                 log.error("Error in FFmpeg processing: {}", e.getMessage());
                 throw new RuntimeException("Failed to process stream", e);
             } finally {
-                //activeProcesses.remove(streamId);
+                context.setProccessing(false);
+                redisHelper.saveContext(streamId, context);
             }
 
         }, ffmpegStreamExecutor);
@@ -143,5 +153,16 @@ public class FFmpegService {
                     watermark.getOpacity(), watermark.getX(), watermark.getY()
             ));
         }
+    }
+
+    public void stopProcess(String streamId) {
+        StreamContext context = redisHelper.getContext(streamId);
+        if(context == null)
+            return;
+
+        Optional<ProcessHandle> optionalProcessHandle = ProcessHandle.of(context.getPId());
+        optionalProcessHandle.ifPresent(ProcessHandle::destroyForcibly);
+        log.info("FFmpeg process stopped for streamId: {}", streamId);
+
     }
 }

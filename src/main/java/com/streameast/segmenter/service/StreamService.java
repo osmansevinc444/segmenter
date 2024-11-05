@@ -67,7 +67,7 @@ public class StreamService {
                     .thenApply(v -> Arrays.asList(streamId))
                     .whenComplete((urls, ex) -> {
                         if (ex != null) {
-                            //stopStream(streamId);
+                            stopStream(streamId);
                             resultFuture.completeExceptionally(
                                     new RuntimeException("Failed to start stream within timeout", ex));
                         } else {
@@ -99,7 +99,7 @@ public class StreamService {
         AtomicBoolean isReadyForWatch = new AtomicBoolean(false);
 
         try {
-            final WatchService watchService = FileSystems.getDefault().newWatchService();;
+            final WatchService watchService = FileSystems.getDefault().newWatchService();
             Files.createDirectories(tempDir);
             Path segmentPattern = tempDir.resolve("segment_%d.ts");
 
@@ -161,9 +161,44 @@ public class StreamService {
             if (!readySignal.isDone()) {
                 readySignal.completeExceptionally(e);
             }
-            //stopStream(streamId);
+            stopStream(streamId);
         }
 
+    }
+
+    public void stopStream(String streamId) {
+        StreamContext streamContext = redisHelper.getContext(streamId);
+        if (streamContext != null) {
+            streamContext.setActive(false);
+            fFmpegService.stopProcess(streamId);
+            redisHelper.saveContext(streamId, streamContext);
+
+            List<StorageService> services = storageServiceFactory.getStorageServices(streamContext.getStorageTypes());
+            services.forEach(item -> item.deleteStream(streamId));
+        }
+
+        //m3u8Service.clearStreamCache(streamId);
+
+        cleanupStreamDirectory(streamId);
+    }
+
+    private void cleanupStreamDirectory(String streamId) {
+        try {
+            Path streamDir = appSettings.resolvePath("streams", streamId);
+            if (Files.exists(streamDir)) {
+                Files.walk(streamDir)
+                        .sorted((a, b) -> -a.compareTo(b))
+                        .forEach(path -> {
+                            try {
+                                Files.deleteIfExists(path);
+                            } catch (Exception e) {
+                                log.warn("Failed to delete path: {}", path);
+                            }
+                        });
+            }
+        } catch (Exception e) {
+            log.error("Error cleaning up stream directory: {}", e.getMessage());
+        }
     }
 
     private void processSegment(String streamId, Path segmentPath, String segmentName, AtomicBoolean isReadyForWatch, CompletableFuture<Void> readySignal) {
