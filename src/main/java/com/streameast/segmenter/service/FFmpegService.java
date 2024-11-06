@@ -5,6 +5,7 @@ import com.streameast.segmenter.model.StreamContext;
 import com.streameast.segmenter.model.enums.VideoQuality;
 import com.streameast.segmenter.model.Watermark;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -53,7 +54,7 @@ public class FFmpegService {
                 Files.createDirectories(outputPattern.getParent());
 
                 List<String> command = buildFFmpegCommand(streamUrl, outputPattern, quality, watermark);
-                log.debug("Starting FFmpeg process with command: {}", String.join(" ", command));
+                log.info("Starting FFmpeg process with command: {}", String.join(" ", command));
 
                 ProcessBuilder pb = new ProcessBuilder(command);
                 pb.inheritIO();
@@ -92,17 +93,47 @@ public class FFmpegService {
         command.add("-i");
         command.add(streamUrl);
 
-        if (watermark != null) {
-            addWatermarkParameters(command, watermark);
+        // Build the filter chain
+        StringBuilder filterChain = new StringBuilder();
+
+        if (watermark != null && StringUtils.isNotEmpty(watermark.getImagePath())) {
+            // Add watermark image input
+            command.add("-i");
+            command.add(watermark.getImagePath());
+
+            // Create complete filter chain with watermark
+            filterChain.append("[0:v]select='not(mod(n\\,2))'[filtered];") // Select frames
+                    .append("[1:v]scale=-1:").append(watermark.getSize())
+                    .append(",format=rgba,colorchannelmixer=aa=").append(watermark.getOpacity())
+                    .append("[watermark];") // Prepare watermark
+                    .append("[filtered][watermark]overlay=")
+                    .append(watermark.getX()).append(":").append(watermark.getY())
+                    .append("[outv]"); // Final output label
+        } else if (watermark != null && StringUtils.isNotEmpty(watermark.getText())) {
+            // Text watermark filter chain
+            filterChain.append("[0:v]select='not(mod(n\\,2))',") // Select frames
+                    .append("drawtext=text='").append(watermark.getText())
+                    .append("':fontsize=").append(watermark.getSize())
+                    .append(":fontcolor=").append(watermark.getColor())
+                    .append("@").append(watermark.getOpacity())
+                    .append(":x=").append(watermark.getX())
+                    .append(":y=").append(watermark.getY())
+                    .append("[outv]"); // Final output label
+        } else {
+            // Simple selection filter chain
+            filterChain.append("[0:v]select='not(mod(n\\,2))'[outv]");
         }
 
-        // Dynamic filtering to skip segments (example: skip every other segment)
         command.add("-filter_complex");
-        command.add("[0:v]select='not(mod(n\\,2))'[v]"); // Replace with logic specific to ad markers
+        command.add(filterChain.toString());
 
-        // Map the filtered output
+        // Map the final video output
         command.add("-map");
-        command.add("[v]");
+        command.add("[outv]"); // Use the final output label
+
+        // Map all audio streams from input
+        command.add("-map");
+        command.add("0:a?"); // The ? makes it optional in case there's no audio
 
         // Video settings
         command.add("-c:v");
@@ -127,34 +158,13 @@ public class FFmpegService {
         command.add("0");
         command.add("-segment_list_flags");
         command.add("+live");
-        command.add("-map");
-        command.add("0");
+
+        // Use output pattern for segments
         command.add(outputPattern.toString());
 
         return command;
     }
 
-
-    private void addWatermarkParameters(List<String> command, Watermark watermark) {
-        if (watermark.getImagePath() != null) {
-            command.add("-i");
-            command.add(watermark.getImagePath());
-            command.add("-filter_complex");
-            command.add(String.format(
-                    "[1:v]scale=-1:%d,format=rgba,colorchannelmixer=aa=%f[watermark];" +
-                            "[0:v][watermark]overlay=%d:%d",
-                    watermark.getSize(), watermark.getOpacity(),
-                    watermark.getX(), watermark.getY()
-            ));
-        } else if (watermark.getText() != null) {
-            command.add("-vf");
-            command.add(String.format(
-                    "drawtext=text='%s':fontsize=%d:fontcolor=%s@%f:x=%d:y=%d",
-                    watermark.getText(), watermark.getSize(), watermark.getColor(),
-                    watermark.getOpacity(), watermark.getX(), watermark.getY()
-            ));
-        }
-    }
 
     public void stopProcess(String streamId) {
         StreamContext context = redisHelper.getContext(streamId);
