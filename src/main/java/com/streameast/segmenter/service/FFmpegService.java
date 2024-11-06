@@ -59,6 +59,7 @@ public class FFmpegService {
                 pb.inheritIO();
                 Process process = pb.start();
                 context.setPId(process.pid());
+                context.setActive(true);
                 context.setProccessing(true);
                 redisHelper.saveContext(streamId, context);
 

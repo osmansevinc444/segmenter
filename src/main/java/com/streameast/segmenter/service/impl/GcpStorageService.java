@@ -122,7 +122,7 @@ public class GcpStorageService implements StorageService {
                     deleteBlobsInBatch(blobsToDelete);
                 }
 
-                log.info("Deleted all objects for prefix: {}", prefix);
+                log.info("Deleted {} objects from GCP for prefix: {}", blobsToDelete.size(), streamId);
 
             } catch (Exception e) {
                 log.error("Error deleting from GCP: {}", e.getMessage());
@@ -133,7 +133,7 @@ public class GcpStorageService implements StorageService {
     private void deleteBlobsInBatch(List<BlobId> blobsToDelete) {
         try {
             storage.delete(blobsToDelete);
-            blobsToDelete.forEach(blobId -> log.info("Deleted GCP object: {}", blobId.getName()));
+            blobsToDelete.forEach(blobId -> log.debug("Deleted GCP object: {}", blobId.getName()));
         } catch (Exception e) {
             log.error("Error deleting batch of objects from GCP: {}", e.getMessage());
         }

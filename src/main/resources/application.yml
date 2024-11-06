@@ -9,7 +9,8 @@ requiredParams:
   segmentDuration: ${SEGMENT_DEFAULT_DURATION:5}
   localTempPath: ${STORAGE_LOCAL_TEMP_PATH:C:/temp}
   readyIfSegmentCount: ${READY_IF_CREATED:3}
-  serverUrl: ${URL:}
+  serverUrl: ${URL:http://localhost:8090}
+  maxSegmentsInPlaylist: ${MAX_SEGMENTS_IN_PLAYLIST:6}
 
 storage:
   aws:

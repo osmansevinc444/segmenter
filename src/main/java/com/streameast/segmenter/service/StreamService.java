@@ -41,12 +41,14 @@ public class StreamService {
     private final AppSettings appSettings;
     private final FFmpegService fFmpegService;
     private final StorageServiceFactory storageServiceFactory;
+    private final PlaylistService playlistService;
 
-    public StreamService(AppSettings appSettings, RedisHelper redisHelper, FFmpegService fFmpegService, StorageServiceFactory storageServiceFactory) {
+    public StreamService(AppSettings appSettings, RedisHelper redisHelper, FFmpegService fFmpegService, StorageServiceFactory storageServiceFactory, PlaylistService playlistService) {
         this.appSettings = appSettings;
         this.redisHelper = redisHelper;
         this.fFmpegService = fFmpegService;
         this.storageServiceFactory = storageServiceFactory;
+        this.playlistService = playlistService;
     }
 
     public CompletableFuture<List<String>> startStream(String streamUrl, List<String> storageTypes, VideoQuality quality, Watermark watermark, String providedStreamId) {
@@ -54,17 +56,20 @@ public class StreamService {
         String streamId = providedStreamId != null ? providedStreamId : UUID.randomUUID().toString();
         long startTimeMs = System.currentTimeMillis();
         try {
-            if(redisHelper.getContext(streamId) == null) {
-                redisHelper.saveContext(streamId, new StreamContext(streamId, streamUrl, storageServiceFactory.getAvailableStorageServices(storageTypes), quality, LocalDateTime.now(), watermark));
+            StreamContext context = redisHelper.getContext(streamId);
+            if( context == null) {
+                context = new StreamContext(streamId, streamUrl, storageServiceFactory.getAvailableStorageServices(storageTypes), quality, LocalDateTime.now(), watermark);
+                redisHelper.saveContext(streamId, context);
             }
 
             CompletableFuture<List<String>> resultFuture = new CompletableFuture<>();
             CompletableFuture<Void> readySignal = new CompletableFuture<>();
 
+            final List<String> urlList = context.getUrls(appSettings.getRequiredParams().getServerUrl());
             processStream(streamId, streamUrl, readySignal, quality, watermark);
 
             readySignal.orTimeout(30, TimeUnit.SECONDS)
-                    .thenApply(v -> Arrays.asList(streamId))
+                    .thenApply(v -> urlList)
                     .whenComplete((urls, ex) -> {
                         if (ex != null) {
                             stopStream(streamId);
@@ -108,7 +113,6 @@ public class StreamService {
 
             setupWatchService(tempDir, watchService);
             context.setActive(true);
-
             CompletableFuture.runAsync(() -> {
                 try {
                     while (context.isActive()) {
@@ -222,7 +226,7 @@ public class StreamService {
 
             CompletableFuture.allOf(uploads.toArray(new CompletableFuture[0]))
                     .thenRun(() -> {
-                        //m3u8Service.addSegment(streamId, segmentName);
+                        playlistService.addSegment(streamId, segmentName);
                         if (isReadyForWatch.compareAndSet(false, true)) {
                             readySignal.complete(null);
                         }

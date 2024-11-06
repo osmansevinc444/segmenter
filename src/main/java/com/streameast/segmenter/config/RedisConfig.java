@@ -1,5 +1,8 @@
 package com.streameast.segmenter.config;
 
+import com.fasterxml.jackson.annotation.JsonAutoDetect;
+import com.fasterxml.jackson.annotation.PropertyAccessor;
+import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.streameast.segmenter.model.StreamContext;
@@ -27,12 +30,13 @@ public class RedisConfig {
         template.setConnectionFactory(redisConnectionFactory);
 
         ObjectMapper objectMapper = new ObjectMapper();
-        objectMapper.registerModule(new JavaTimeModule()); // Register JavaTimeModule for LocalDateTime
+        objectMapper.registerModule(new JavaTimeModule());
+        objectMapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+        objectMapper.setVisibility(PropertyAccessor.ALL, JsonAutoDetect.Visibility.NONE);
+        objectMapper.setVisibility(PropertyAccessor.FIELD, JsonAutoDetect.Visibility.ANY);
 
-        Jackson2JsonRedisSerializer<StreamContext> serializer =
-                new Jackson2JsonRedisSerializer<>(StreamContext.class);
-        serializer.setObjectMapper(objectMapper); // Use the custom ObjectMapper
-
+        Jackson2JsonRedisSerializer<StreamContext> serializer = new Jackson2JsonRedisSerializer<>(StreamContext.class);
+        serializer.setObjectMapper(objectMapper);
 
         template.setKeySerializer(new StringRedisSerializer());
         template.setHashKeySerializer(new StringRedisSerializer());

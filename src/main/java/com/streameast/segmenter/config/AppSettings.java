@@ -49,6 +49,9 @@ public class AppSettings {
 
         private String serverUrl= "http://localhost:8090";
 
+        @NotNull
+        private Integer maxSegmentsInPlaylist;
+
     }
 
     @Getter

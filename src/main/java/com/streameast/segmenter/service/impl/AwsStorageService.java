@@ -114,7 +114,7 @@ public class AwsStorageService implements StorageService {
                                 .build();
 
                         s3Client.deleteObjects(deleteRequest);
-                        log.info("Deleted {} objects from S3 for prefix: {}", objectsToDelete.size(), prefix);
+                        log.info("Deleted {} objects from S3 for prefix: {}", objectsToDelete.size(), streamId);
                     }
 
                     // Prepare for the next batch if there are more objects
