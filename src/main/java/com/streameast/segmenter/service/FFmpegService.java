@@ -80,6 +80,7 @@ public class FFmpegService {
                 throw new RuntimeException("Failed to process stream", e);
             } finally {
                 context.setProccessing(false);
+                context.setActive(false);
                 redisHelper.saveContext(streamId, context);
             }
 

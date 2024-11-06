@@ -7,7 +7,10 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
 import lombok.Data;
 
+import java.time.LocalDateTime;
 import java.util.List;
+
+import static com.streameast.segmenter.util.AppConstants.DATE_FORMATTER;
 
 @Data
 public class StreamRequest {
@@ -21,5 +24,15 @@ public class StreamRequest {
 
     @Nullable
     private Watermark watermark;
+
+    private String startTimeStr;
+
+    public LocalDateTime getStartTime() {
+        return startTimeStr != null ? LocalDateTime.parse(startTimeStr, DATE_FORMATTER) : null;
+    }
+
+    public void setStartTime(String startTimeStr) {
+        this.startTimeStr = startTimeStr;
+    }
 
 }

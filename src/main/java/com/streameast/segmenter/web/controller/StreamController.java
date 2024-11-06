@@ -27,15 +27,14 @@ public class StreamController {
 
     @PostMapping("/start")
     public ResponseEntity<?> startStream(@RequestBody StreamRequest request) {
-
         try {
             List<String> urls = streamService.startStream(
                     request.getStreamUrl(),
                     request.getStorageTypes(),
                     request.getVideoQuality(),
                     request.getWatermark(),
-                    null
-            ).get(30, TimeUnit.SECONDS);
+                    request.getStartTime()
+            ).get(60, TimeUnit.SECONDS);
 
             return ResponseEntity.ok().body(urls);
         } catch (Exception e) {

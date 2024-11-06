@@ -51,24 +51,29 @@ public class StreamService {
         this.playlistService = playlistService;
     }
 
-    public CompletableFuture<List<String>> startStream(String streamUrl, List<String> storageTypes, VideoQuality quality, Watermark watermark, String providedStreamId) {
+    public CompletableFuture<List<String>> startStream(String streamUrl, List<String> storageTypes, VideoQuality quality, Watermark watermark, LocalDateTime startTime) {
 
-        String streamId = providedStreamId != null ? providedStreamId : UUID.randomUUID().toString();
+        String streamId = UUID.randomUUID().toString();
         long startTimeMs = System.currentTimeMillis();
         try {
-            StreamContext context = redisHelper.getContext(streamId);
-            if( context == null) {
-                context = new StreamContext(streamId, streamUrl, storageServiceFactory.getAvailableStorageServices(storageTypes), quality, LocalDateTime.now(), watermark);
-                redisHelper.saveContext(streamId, context);
-            }
-
             CompletableFuture<List<String>> resultFuture = new CompletableFuture<>();
             CompletableFuture<Void> readySignal = new CompletableFuture<>();
+            StreamContext context = redisHelper.getContext(streamId);
+            if( context == null) {
+                LocalDateTime now = LocalDateTime.now();
+                context = new StreamContext(streamId, streamUrl, storageServiceFactory.getAvailableStorageServices(storageTypes), quality, startTime == null ? now : startTime, watermark);
+                redisHelper.saveContext(streamId, context);
+
+                if(startTime != null && startTime.isAfter(now)){
+                        resultFuture.complete(Arrays.asList("Stream scheduled for " + startTime));
+                        return resultFuture;
+                }
+            }
 
             final List<String> urlList = context.getUrls(appSettings.getRequiredParams().getServerUrl());
             processStream(streamId, streamUrl, readySignal, quality, watermark);
 
-            readySignal.orTimeout(30, TimeUnit.SECONDS)
+            readySignal.orTimeout(60, TimeUnit.SECONDS)
                     .thenApply(v -> urlList)
                     .whenComplete((urls, ex) -> {
                         if (ex != null) {
@@ -173,8 +178,8 @@ public class StreamService {
     public void stopStream(String streamId) {
         StreamContext streamContext = redisHelper.getContext(streamId);
         if (streamContext != null) {
-            streamContext.setActive(false);
             fFmpegService.stopProcess(streamId);
+            streamContext.setActive(false);
             redisHelper.saveContext(streamId, streamContext);
 
             List<StorageService> services = storageServiceFactory.getStorageServices(streamContext.getStorageTypes());

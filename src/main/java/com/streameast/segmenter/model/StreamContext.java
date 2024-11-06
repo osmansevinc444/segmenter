@@ -55,7 +55,6 @@ public class StreamContext implements Serializable {
         return active.get();
     }
 
-    @JsonProperty("active")
     public void setActive(boolean value) {
         active.set(value);
     }
