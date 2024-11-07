@@ -30,7 +30,7 @@ public class RedisHelper {
         redisTemplate.delete(key);
     }
 
-    public List<StreamContext> getScheduledContexts(LocalDateTime dateTime) {
+    public List<StreamContext> getReadyScheduledContexts(LocalDateTime dateTime) {
         // Retrieve all keys
         Set<String> keys = redisTemplate.keys("*"); // Use a wildcard to get all keys
         List<StreamContext> results = new ArrayList<>();
@@ -44,6 +44,28 @@ public class RedisHelper {
                         && context.isActive() == true) {
 
                     if( dateTime==null || (dateTime != null && dateTime.isAfter(context.getStartTime()))){
+                        results.add(context);
+                    }
+                }
+            }
+        }
+        return results;
+    }
+
+    public List<StreamContext> getScheduledStreamForNotification(LocalDateTime dateTime) {
+        // Retrieve all keys
+        Set<String> keys = redisTemplate.keys("*"); // Use a wildcard to get all keys
+        List<StreamContext> results = new ArrayList<>();
+
+        if (keys != null) {
+            for (String key : keys) {
+                StreamContext context = redisTemplate.opsForValue().get(key);
+                if (context != null
+                        && context.getPId() == -1
+                        && context.isProccessing() == false
+                        && context.isActive() == true) {
+
+                    if( dateTime==null || (dateTime != null && dateTime.isBefore(context.getStartTime()))){
                         results.add(context);
                     }
                 }

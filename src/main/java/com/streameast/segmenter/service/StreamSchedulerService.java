@@ -7,10 +7,8 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.stereotype.Service;
 
-import java.net.InetAddress;
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
 @Slf4j
@@ -31,7 +29,7 @@ public class StreamSchedulerService {
     @Scheduled(fixedRate = 30, timeUnit = TimeUnit.SECONDS)
     public void processScheduledStreams() {
         LocalDateTime now = LocalDateTime.now();
-        List<StreamContext> streamContexts = redisHelper.getScheduledContexts(now);
+        List<StreamContext> streamContexts = redisHelper.getReadyScheduledContexts(now);
         for(StreamContext streamContext : streamContexts) {
             schedulerExecutor.execute(() -> processStream(streamContext));
         }

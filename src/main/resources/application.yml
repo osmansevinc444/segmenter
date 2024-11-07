@@ -26,3 +26,19 @@ storage:
     enabled: true
     gcpProjectId: ${GCP_PROJECT_ID:}
     gcpBucket: ${GCP_BUCKET:}
+
+
+notification:
+  enabled: false
+  notifyBeforeMinutes:
+    - "5"
+    - "2"
+    - "1"
+    - "0"
+  telegram:
+    enabled: ${TELEGRAM_ENABLED:false}
+    botToken: ${TELEGRAM_BOT_TOKEN:}
+    chatIds:
+      - ${TELEGRAM_CHAT_IDS:}
+    template: "Stream URL: %s\nTime until start: %d minutes\nQuality: %s"
+
