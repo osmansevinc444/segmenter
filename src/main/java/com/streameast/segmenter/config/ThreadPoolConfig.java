@@ -48,13 +48,23 @@ public class ThreadPoolConfig {
 
     @Bean(name = "playlistTaskExecutor")
     public ThreadPoolTaskExecutor playlistTaskExecutor() {
-        // M3u8 playlist işlemleri için özel thread havuzu
         return createExecutor(
                 "playlist-",
                 Runtime.getRuntime().availableProcessors(),   // Core pool size
                 Runtime.getRuntime().availableProcessors() * 2,   // Max pool size
                 500, // Queue capacity
                 120  // Keep alive seconds
+        );
+    }
+
+    @Bean(name = "schedulerTaskExecutor")
+    public ThreadPoolTaskExecutor schedulerTaskExecutor() {
+        return createExecutor(
+                "scheduler-",
+                2,  // Core pool size
+                4,  // Max pool size
+                100, // Queue capacity
+                60  // Keep alive seconds
         );
     }
 

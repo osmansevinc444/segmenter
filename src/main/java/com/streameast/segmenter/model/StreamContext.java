@@ -28,6 +28,7 @@ public class StreamContext implements Serializable {
     private Watermark watermark;
     private long pId = -1;
     private boolean isProccessing = false;
+    private String desc;
 
     @JsonIgnore
     private final AtomicBoolean active = new AtomicBoolean(false);

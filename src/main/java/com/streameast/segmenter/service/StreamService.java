@@ -51,9 +51,9 @@ public class StreamService {
         this.playlistService = playlistService;
     }
 
-    public CompletableFuture<List<String>> startStream(String streamUrl, List<String> storageTypes, VideoQuality quality, Watermark watermark, LocalDateTime startTime) {
+    public CompletableFuture<List<String>> startStream(String streamUrl, List<String> storageTypes, VideoQuality quality, Watermark watermark, LocalDateTime startTime, String id) {
 
-        String streamId = UUID.randomUUID().toString();
+        String streamId = id != null ? id : UUID.randomUUID().toString();
         long startTimeMs = System.currentTimeMillis();
         try {
             CompletableFuture<List<String>> resultFuture = new CompletableFuture<>();
@@ -65,6 +65,8 @@ public class StreamService {
                 redisHelper.saveContext(streamId, context);
 
                 if(startTime != null && startTime.isAfter(now)){
+                        context.setActive(true);
+                        redisHelper.saveContext(streamId, context);
                         resultFuture.complete(Arrays.asList("Stream scheduled for " + startTime));
                         return resultFuture;
                 }

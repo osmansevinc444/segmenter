@@ -33,7 +33,7 @@ public class StreamController {
                     request.getStorageTypes(),
                     request.getVideoQuality(),
                     request.getWatermark(),
-                    request.getStartTime()
+                    request.getStartTime(), null
             ).get(60, TimeUnit.SECONDS);
 
             return ResponseEntity.ok().body(urls);
