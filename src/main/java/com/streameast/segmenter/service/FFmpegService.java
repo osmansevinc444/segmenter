@@ -91,64 +91,62 @@ public class FFmpegService {
                                             VideoQuality quality, Watermark watermark) {
         List<String> command = new ArrayList<>();
         command.add(ffmpegPath);
+
+        // HLS için gerekli input ayarları
+        command.add("-live_start_index");
+        command.add("-1");
         command.add("-i");
         command.add(streamUrl);
 
-        // Build the filter chain
         StringBuilder filterChain = new StringBuilder();
 
         if (watermark != null && StringUtils.isNotEmpty(watermark.getImagePath())) {
-            // Add watermark image input
             command.add("-i");
             command.add(watermark.getImagePath());
 
-            // Create complete filter chain with watermark
-            filterChain.append("[0:v]select='not(mod(n\\,2))'[filtered];") // Select frames
+            filterChain.append("[0:v]setpts=PTS-STARTPTS,")  // Timestamp'leri sıfırla
+                    .append("select='not(mod(n\\,2))'[filtered];")
                     .append("[1:v]scale=-1:").append(watermark.getSize())
                     .append(",format=rgba,colorchannelmixer=aa=").append(watermark.getOpacity())
-                    .append("[watermark];") // Prepare watermark
+                    .append("[watermark];")
                     .append("[filtered][watermark]overlay=")
                     .append(watermark.getX()).append(":").append(watermark.getY())
-                    .append("[outv]"); // Final output label
+                    .append("[outv]");
         } else if (watermark != null && StringUtils.isNotEmpty(watermark.getText())) {
-            // Text watermark filter chain
-            filterChain.append("[0:v]select='not(mod(n\\,2))',") // Select frames
+            filterChain.append("[0:v]setpts=PTS-STARTPTS,")  // Timestamp'leri sıfırla
+                    .append("select='not(mod(n\\,2))',")
                     .append("drawtext=text='").append(watermark.getText())
                     .append("':fontsize=").append(watermark.getSize())
                     .append(":fontcolor=").append(watermark.getColor())
                     .append("@").append(watermark.getOpacity())
                     .append(":x=").append(watermark.getX())
                     .append(":y=").append(watermark.getY())
-                    .append("[outv]"); // Final output label
+                    .append("[outv]");
         } else {
-            // Simple selection filter chain
-            filterChain.append("[0:v]select='not(mod(n\\,2))'[outv]");
+            filterChain.append("[0:v]setpts=PTS-STARTPTS,select='not(mod(n\\,2))'[outv]");
         }
 
         command.add("-filter_complex");
         command.add(filterChain.toString());
 
-        // Map the final video output
         command.add("-map");
-        command.add("[outv]"); // Use the final output label
-
-        // Map all audio streams from input
+        command.add("[outv]");
         command.add("-map");
-        command.add("0:a?"); // The ? makes it optional in case there's no audio
+        command.add("0:a?");
 
-        // Video settings
+        // Video ayarları
         command.add("-c:v");
         command.add("libx264");
         command.add("-b:v");
         command.add(quality.getVideoBitrateKbps() + "k");
 
-        // Audio settings
+        // Ses ayarları
         command.add("-c:a");
         command.add("aac");
         command.add("-b:a");
         command.add(quality.getAudioBitrateKbps() + "k");
 
-        // Segmenting options
+        // Segment ayarları
         command.add("-f");
         command.add("segment");
         command.add("-segment_time");
@@ -160,7 +158,10 @@ public class FFmpegService {
         command.add("-segment_list_flags");
         command.add("+live");
 
-        // Use output pattern for segments
+        // Timestamp düzeltmeleri
+        command.add("-copyts");
+        command.add("-start_at_zero");
+
         command.add(outputPattern.toString());
 
         return command;
